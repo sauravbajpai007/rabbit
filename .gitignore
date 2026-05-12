@@ -5,3 +5,12 @@ coverage/
 .env.*
 *.log
 .DS_Store
+
+# Ollama AI review (local / CI ephemeral)
+review.md
+review.txt
+review.json
+.ai-review-*.patch
+.ai-review-prompt.txt
+.ai-review-request.json
+.ai-review-response.json

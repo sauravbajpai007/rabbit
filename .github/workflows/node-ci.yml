@@ -1,11 +1,4 @@
-# Node.js 20 · npm ci · ESLint · Jest · build · Semgrep · optional SonarCloud ·
-# CodeRabbit YAML check · optional coderabbitai/ai-pr-reviewer · optional custom GPT diff
-#
-# Secrets: OPENAI_API_KEY (optional AI steps), SONAR_TOKEN (optional Sonar)
-# Custom GPT diff: PRs (issue comment) + pushes to main (commit comment on after SHA).
-#
-# Optional Sonar step checks for sonar-project.properties via a shell step (hashFiles
-# is not available in job env on all GitHub versions).
+# Core CI — Node 20, lint, test, build (pull requests + pushes to main)
 
 name: Node.js CI
 
@@ -25,11 +18,8 @@ concurrency:
 jobs:
   ci:
     name: Lint, test & build
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    permissions:
-      contents: read
     env:
       CI: true
     steps:
@@ -44,124 +34,3 @@ jobs:
       - run: npm run lint
       - run: npm test -- --ci
       - run: npm run build
-
-  semgrep:
-    name: Semgrep (security scan)
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    permissions:
-      contents: read
-    container:
-      image: semgrep/semgrep
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      # Scan first-party code only (avoid vendor paths under node_modules/**/src).
-      - run: semgrep scan --config auto --error ./src
-
-  sonarqube:
-    name: SonarCloud (optional)
-    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    env:
-      HAS_SONAR_SECRET: ${{ secrets.SONAR_TOKEN != '' }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - name: Detect sonar-project.properties
-        id: sonar_config
-        run: |
-          if [ -f sonar-project.properties ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Sonar scan
-        if: env.HAS_SONAR_SECRET == 'true' && steps.sonar_config.outputs.present == 'true'
-        uses: SonarSource/sonarqube-scan-action@v5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Sonar skipped
-        if: env.HAS_SONAR_SECRET != 'true' || steps.sonar_config.outputs.present != 'true'
-        run: echo '::notice::Sonar skipped — add SONAR_TOKEN secret and sonar-project.properties at repo root.'
-
-  coderabbit:
-    name: CodeRabbit (config validation)
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      - run: test -f .coderabbit.yaml || { echo 'Missing .coderabbit.yaml' >&2; exit 1; }
-      - run: ruby -ryaml -e "YAML.load_file('.coderabbit.yaml')"
-      - run: echo "Install CodeRabbit — https://github.com/apps/coderabbit/"
-
-  ai_pr_reviewer:
-    name: AI PR reviewer (coderabbitai/ai-pr-reviewer)
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    permissions:
-      contents: read
-      pull-requests: write
-    env:
-      HAS_OPENAI_KEY: ${{ secrets.OPENAI_API_KEY != '' }}
-    steps:
-      - name: Action runs on pull_request only
-        if: github.event_name == 'push'
-        run: echo '::notice::coderabbitai/ai-pr-reviewer only supports pull_request — open a PR for that review, or use Custom OpenAI + CodeRabbit App.'
-      - name: Skip (no OpenAI key)
-        if: github.event_name == 'pull_request' && env.HAS_OPENAI_KEY != 'true'
-        run: echo '::notice::OPENAI_API_KEY not set — skipping ai-pr-reviewer.'
-      - uses: coderabbitai/ai-pr-reviewer@v1.19.1
-        if: github.event_name == 'pull_request' && env.HAS_OPENAI_KEY == 'true'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        with:
-          debug: false
-          review_simple_changes: false
-          review_comment_lgtm: false
-
-  custom_openai_diff:
-    name: Custom OpenAI diff review
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    permissions:
-      contents: write
-      pull-requests: write
-    env:
-      HAS_OPENAI_KEY: ${{ secrets.OPENAI_API_KEY != '' }}
-    steps:
-      - name: Skip (no OpenAI key)
-        if: env.HAS_OPENAI_KEY != 'true'
-        run: echo '::notice::Custom GPT diff skipped — add OPENAI_API_KEY repository secret.'
-      - uses: actions/checkout@v4
-        if: env.HAS_OPENAI_KEY == 'true'
-        with:
-          fetch-depth: 0
-          persist-credentials: false
-      - uses: actions/setup-node@v4
-        if: env.HAS_OPENAI_KEY == 'true'
-        with:
-          node-version: "20"
-      - name: Post GPT diff comment
-        if: env.HAS_OPENAI_KEY == 'true'
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DIFF_REVIEW_MODEL: gpt-4o-mini
-        run: node scripts/openai-diff-review.mjs

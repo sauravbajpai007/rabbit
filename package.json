@@ -15,6 +15,7 @@
     "prebuild": "node -e \"var p=process.version.slice(1).split('.');if(+p[0]<20){console.error('Node.js 20+ is required (you have '+process.version+'). Use nvm/fnm: nvm install && nvm use');process.exit(1);}\"",
     "build": "tsc -p tsconfig.build.json",
     "dashboard": "node scripts/dashboard-server.cjs",
+    "ai-review:local": "bash scripts/ai-review.sh origin/main HEAD",
     "start": "node dist/index.js",
     "clean": "rm -rf dist"
   },

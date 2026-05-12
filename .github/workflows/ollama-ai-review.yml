@@ -1,0 +1,113 @@
+# =============================================================================
+# Ollama — offline PR diff review (self-hosted runner only)
+# =============================================================================
+# Runner must have: Ollama listening (default http://127.0.0.1:11434), git, curl,
+# python3, bash. Optional: gh CLI for PR comments.
+#
+# Repository variables (Settings → Variables → Actions), all optional:
+#   OLLAMA_MODEL                 e.g. qwen2.5-coder:7b or deepseek-coder:6.7b
+#   OLLAMA_HOST                  e.g. http://127.0.0.1:11434
+#   OLLAMA_JSON_OUTPUT           true → also write review.json (model JSON mode)
+#   POST_OLLAMA_REVIEW_COMMENT   true → gh pr comment with review.md
+#
+# Label your runner (recommended): self-hosted + linux + ollama — then set
+# runs-on: [self-hosted, linux, ollama] below.
+# =============================================================================
+
+name: Ollama AI review (self-hosted)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: ollama-ai-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  ollama_review:
+    name: Ollama PR diff review
+    runs-on: self-hosted
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pull-requests: write
+
+    env:
+      OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
+      OLLAMA_HOST: ${{ vars.OLLAMA_HOST }}
+      POST_COMMENT: ${{ vars.POST_OLLAMA_REVIEW_COMMENT }}
+
+    steps:
+      - name: Skip entire job when not a pull_request
+        if: github.event_name != 'pull_request'
+        run: |
+          echo '::notice::Open a pull_request or run scripts/ai-review.sh locally. workflow_dispatch exits here.'
+          exit 0
+
+      - name: Checkout (full history for diff)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Preflight — Ollama health
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          H="${OLLAMA_HOST:-http://127.0.0.1:11434}"
+          curl -fsS --max-time 30 "${H}/api/tags" | head -c 500
+          echo
+
+      - name: Preflight — model on runner (best effort)
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        run: |
+          M="${OLLAMA_MODEL:-qwen2.5-coder:7b}"
+          if command -v ollama >/dev/null 2>&1; then
+            ollama list | grep -F "${M}" || echo "::warning::Run on runner: ollama pull ${M}"
+          else
+            echo "::warning::ollama CLI not in PATH — ensure daemon serves ${M}"
+          fi
+
+      - name: Run AI review script
+        if: github.event_name == 'pull_request'
+        run: bash scripts/ai-review.sh
+        env:
+          OLLAMA_HOST: ${{ env.OLLAMA_HOST }}
+          OLLAMA_MODEL: ${{ env.OLLAMA_MODEL }}
+          OLLAMA_OUTPUT_JSON: ${{ vars.OLLAMA_JSON_OUTPUT == 'true' && '1' || '0' }}
+
+      - name: Upload review artifacts
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ollama-ai-review-pr-${{ github.event.pull_request.number }}-${{ github.run_id }}
+          path: |
+            review.md
+            review.txt
+            review.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Post review on PR (optional)
+        if: github.event_name == 'pull_request' && env.POST_COMMENT == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! command -v gh >/dev/null 2>&1; then
+            echo '::warning::gh not installed — install GitHub CLI on the runner for PR comments'
+            exit 0
+          fi
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file review.md
+
+      - name: Cleanup ephemeral files
+        if: github.event_name == 'pull_request' && always()
+        run: rm -f .ai-review-diff.patch .ai-review-prompt.txt .ai-review-request.json .ai-review-response.json || true
