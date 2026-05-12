@@ -1,0 +1,136 @@
+# Node.js 20 · npm ci · ESLint · Jest · build · Semgrep · optional SonarCloud ·
+# CodeRabbit YAML check · optional coderabbitai/ai-pr-reviewer · optional custom GPT diff
+#
+# Secrets: OPENAI_API_KEY (optional AI jobs), SONAR_TOKEN (optional Sonar)
+# Variable: RUN_CUSTOM_OPENAI_DIFF = true → enables scripts/openai-diff-review.mjs
+
+name: Node.js CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: Lint, test & build
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      CI: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test -- --ci
+      - run: npm run build
+
+  semgrep:
+    name: Semgrep (security scan)
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    container:
+      image: semgrep/semgrep
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: semgrep scan --config auto --error --exclude scripts
+
+  sonarqube:
+    name: SonarCloud (optional)
+    if: |
+      (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') &&
+      secrets.SONAR_TOKEN != '' &&
+      hashFiles('sonar-project.properties') != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: SonarSource/sonarqube-scan-action@v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  coderabbit:
+    name: CodeRabbit (config validation)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: test -f .coderabbit.yaml || { echo 'Missing .coderabbit.yaml' >&2; exit 1; }
+      - run: ruby -ryaml -e "YAML.load_file('.coderabbit.yaml')"
+      - run: echo "Install CodeRabbit — https://github.com/apps/coderabbit/"
+
+  ai_pr_reviewer:
+    name: AI PR reviewer (coderabbitai/ai-pr-reviewer)
+    if: github.event_name == 'pull_request' && secrets.OPENAI_API_KEY != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: coderabbitai/ai-pr-reviewer@v1.19.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        with:
+          debug: false
+          review_simple_changes: false
+          review_comment_lgtm: false
+
+  custom_openai_diff:
+    name: Custom OpenAI diff review
+    if: |
+      github.event_name == 'pull_request' &&
+      secrets.OPENAI_API_KEY != '' &&
+      vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIFF_REVIEW_MODEL: gpt-4o-mini
+        run: node scripts/openai-diff-review.mjs
