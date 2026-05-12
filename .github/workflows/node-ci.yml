@@ -4,7 +4,8 @@
 # Secrets: OPENAI_API_KEY (optional AI steps), SONAR_TOKEN (optional Sonar)
 # Variable: RUN_CUSTOM_OPENAI_DIFF = true → enables scripts/openai-diff-review.mjs
 #
-# Optional steps use flags from job env (secrets may only appear in env values, not in `if:`).
+# Optional Sonar step checks for sonar-project.properties via a shell step (hashFiles
+# is not available in job env on all GitHub versions).
 
 name: Node.js CI
 
@@ -68,20 +69,27 @@ jobs:
       contents: read
     env:
       HAS_SONAR_SECRET: ${{ secrets.SONAR_TOKEN != '' }}
-      HAS_SONAR_PROPS: ${{ hashFiles('sonar-project.properties') != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
+      - name: Detect sonar-project.properties
+        id: sonar_config
+        run: |
+          if [ -f sonar-project.properties ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Sonar scan
-        if: env.HAS_SONAR_SECRET == 'true' && env.HAS_SONAR_PROPS == 'true'
+        if: env.HAS_SONAR_SECRET == 'true' && steps.sonar_config.outputs.present == 'true'
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Sonar skipped
-        if: env.HAS_SONAR_SECRET != 'true' || env.HAS_SONAR_PROPS != 'true'
+        if: env.HAS_SONAR_SECRET != 'true' || steps.sonar_config.outputs.present != 'true'
         run: echo '::notice::Sonar skipped — add SONAR_TOKEN secret and sonar-project.properties at repo root.'
 
   coderabbit:
