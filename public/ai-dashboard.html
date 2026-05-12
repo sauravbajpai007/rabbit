@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Dashboard — CodeRabbit</title>
+    <style>
+      :root {
+        --bg: #0c0f14;
+        --surface: #141a24;
+        --border: #1e2836;
+        --text: #e8edf5;
+        --muted: #8b9cb3;
+        --accent: #3dd68c;
+        --accent-dim: rgba(61, 214, 140, 0.15);
+        --radius: 12px;
+        --font: "Segoe UI", system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: var(--font);
+        background: radial-gradient(ellipse 120% 80% at 50% -20%, #1a2433 0%, var(--bg) 55%);
+        color: var(--text);
+        line-height: 1.5;
+      }
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 2rem 1.25rem 3rem;
+      }
+      header {
+        margin-bottom: 2rem;
+      }
+      header h1 {
+        font-size: 1.75rem;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.35rem;
+      }
+      header p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+      .badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        background: var(--accent-dim);
+        color: var(--accent);
+        margin-bottom: 0.75rem;
+      }
+      .grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem 1.35rem;
+      }
+      .card h2 {
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--muted);
+        margin: 0 0 0.75rem;
+      }
+      .stat {
+        font-size: 1.85rem;
+        font-weight: 700;
+        letter-spacing: -0.03em;
+        color: var(--text);
+      }
+      .stat span {
+        font-size: 0.9rem;
+        font-weight: 500;
+        color: var(--muted);
+      }
+      .card p {
+        margin: 0.65rem 0 0;
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      .links {
+        margin-top: 1.5rem;
+      }
+      .links a {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.9rem;
+        margin-right: 1.25rem;
+        margin-top: 0.5rem;
+      }
+      .links a:hover {
+        text-decoration: underline;
+      }
+      .foot {
+        margin-top: 2.5rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .pulse {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        margin-right: 0.4rem;
+        animation: pulse 2s ease-in-out infinite;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.35;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <span class="badge">Local</span>
+        <h1>AI dashboard</h1>
+        <p>
+          <span class="pulse" aria-hidden="true"></span>
+          Pull-request intelligence and CodeRabbit wiring at a glance. Static overview —
+          connect live APIs when you are ready.
+        </p>
+      </header>
+
+      <section class="grid" aria-label="Overview metrics">
+        <article class="card">
+          <h2>PR reviews</h2>
+          <div class="stat">CodeRabbit <span>GitHub App</span></div>
+          <p>Install the app on the repo, then open a PR for AI review comments and summaries.</p>
+        </article>
+        <article class="card">
+          <h2>Config</h2>
+          <div class="stat">.coderabbit.yaml <span>branch</span></div>
+          <p>Reviews follow the config on the PR branch. CI can validate YAML on pull requests.</p>
+        </article>
+        <article class="card">
+          <h2>CI checks</h2>
+          <div class="stat">Node.js CI <span>workflow</span></div>
+          <p>Lint, test, and build run on every PR and on pushes to <code>main</code>.</p>
+        </article>
+        <article class="card">
+          <h2>Next steps</h2>
+          <div class="stat" style="font-size: 1.1rem; font-weight: 600">Wire your data</div>
+          <p>
+            Replace this page with API-backed widgets (review counts, severity trends, MTTR) when
+            you expose metrics from GitHub or CodeRabbit.
+          </p>
+        </article>
+      </section>
+
+      <nav class="links" aria-label="Quick links">
+        <a href="https://github.com/apps/coderabbit/">Install CodeRabbit</a>
+        <a href="https://docs.coderabbit.ai/guides/configure-coderabbit">Configuration docs</a>
+        <a href="https://docs.github.com/en/actions">GitHub Actions</a>
+      </nav>
+
+      <footer class="foot">
+        Served by this repo’s <code>npm run dashboard</code> helper. Open
+        <code>/</code> in the browser after starting the server.
+      </footer>
+    </div>
+  </body>
+</html>
