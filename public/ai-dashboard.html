@@ -134,6 +134,35 @@
           opacity: 0.35;
         }
       }
+      .live-strip {
+        display: grid;
+        gap: 0.75rem 1.5rem;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1rem 1.25rem;
+        margin-bottom: 1.5rem;
+        font-size: 0.88rem;
+      }
+      .live-strip strong {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: block;
+        margin-bottom: 0.25rem;
+      }
+      .live-strip .mono {
+        font-family: ui-monospace, "Cascadia Code", monospace;
+        color: var(--text);
+        word-break: break-all;
+      }
+      .live-err {
+        color: #f59e0b;
+        grid-column: 1 / -1;
+      }
     </style>
   </head>
   <body>
@@ -143,10 +172,27 @@
         <h1>AI dashboard</h1>
         <p>
           <span class="pulse" aria-hidden="true"></span>
-          Pull-request intelligence and CodeRabbit wiring at a glance. Static overview —
-          connect live APIs when you are ready.
+          Pull-request intelligence and CodeRabbit wiring at a glance. Cards below are static
+          reference; the live strip updates from this server every few seconds. GitHub or
+          CodeRabbit metrics need their APIs and credentials wired in separately.
         </p>
       </header>
+
+      <section class="live-strip" aria-live="polite" aria-label="Live dashboard data">
+        <div>
+          <strong>Browser clock</strong>
+          <span class="mono" id="browser-clock">—</span>
+        </div>
+        <div>
+          <strong>Server time (UTC)</strong>
+          <span class="mono" id="live-server-time">—</span>
+        </div>
+        <div>
+          <strong>Process</strong>
+          <span class="mono"><span id="live-uptime">—</span> uptime · <span id="live-node">—</span></span>
+        </div>
+        <p class="live-err" id="live-error" hidden></p>
+      </section>
 
       <section class="grid" aria-label="Overview metrics">
         <article class="card">
@@ -181,9 +227,70 @@
       </nav>
 
       <footer class="foot">
-        Served by this repo’s <code>npm run dashboard</code> helper. Open
-        <code>/</code> in the browser after starting the server.
+        Served by this repo’s <code>npm run dashboard</code> helper. Live values use
+        <code>/api/status</code> (same origin). Opening this file as <code>file://</code> will not
+        poll the server.
       </footer>
     </div>
+    <script>
+      (function () {
+        var clockEl = document.getElementById("browser-clock");
+        function tickClock() {
+          if (clockEl) {
+            clockEl.textContent = new Date().toLocaleString(undefined, {
+              weekday: "short",
+              year: "numeric",
+              month: "short",
+              day: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+              second: "2-digit",
+            });
+          }
+        }
+        tickClock();
+        setInterval(tickClock, 1000);
+
+        var timeEl = document.getElementById("live-server-time");
+        var uptimeEl = document.getElementById("live-uptime");
+        var nodeEl = document.getElementById("live-node");
+        var errEl = document.getElementById("live-error");
+
+        function poll() {
+          fetch("/api/status", { cache: "no-store" })
+            .then(function (res) {
+              if (!res.ok) {
+                throw new Error("HTTP " + res.status);
+              }
+              return res.json();
+            })
+            .then(function (data) {
+              if (errEl) {
+                errEl.hidden = true;
+                errEl.textContent = "";
+              }
+              if (timeEl) {
+                timeEl.textContent = data.serverTime || "—";
+              }
+              if (uptimeEl) {
+                uptimeEl.textContent =
+                  typeof data.uptimeSeconds === "number" ? data.uptimeSeconds + "s" : "—";
+              }
+              if (nodeEl) {
+                nodeEl.textContent = data.node || "—";
+              }
+            })
+            .catch(function () {
+              if (errEl) {
+                errEl.hidden = false;
+                errEl.textContent =
+                  "Live server stats unavailable — use http://127.0.0.1:3847/ after npm run dashboard (not file://).";
+              }
+            });
+        }
+        poll();
+        setInterval(poll, 3000);
+      })();
+    </script>
   </body>
 </html>
