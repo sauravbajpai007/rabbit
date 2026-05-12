@@ -1,0 +1,33 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# =============================================================================
+# CodeRabbit — AI pull request reviews (GitHub App)
+# =============================================================================
+# Install: https://github.com/apps/coderabbit/
+# This file is read from the PR branch. Tune profiles and tools to your team.
+# Docs: https://docs.coderabbit.ai/guides/configure-coderabbit
+# =============================================================================
+
+language: "en-US"
+
+reviews:
+  # "assertive" | "chill" — pick what matches your review culture.
+  profile: "assertive"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  review_details: true
+  auto_review:
+    enabled: true
+    # Set true if you want reviews on draft PRs.
+    drafts: false
+
+  # Surface results from GitHub Actions (this repo’s CI checks) inside reviews.
+  tools:
+    github-checks:
+      enabled: true
+      # How long CodeRabbit waits for checks (ms). Increase if CI is slow.
+      timeout_ms: 180000
+
+chat:
+  auto_reply: true
