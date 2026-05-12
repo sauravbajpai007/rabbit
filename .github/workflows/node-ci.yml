@@ -1,8 +1,10 @@
 # Node.js 20 · npm ci · ESLint · Jest · build · Semgrep · optional SonarCloud ·
 # CodeRabbit YAML check · optional coderabbitai/ai-pr-reviewer · optional custom GPT diff
 #
-# Secrets: OPENAI_API_KEY (optional AI jobs), SONAR_TOKEN (optional Sonar)
+# Secrets: OPENAI_API_KEY (optional AI steps), SONAR_TOKEN (optional Sonar)
 # Variable: RUN_CUSTOM_OPENAI_DIFF = true → enables scripts/openai-diff-review.mjs
+#
+# Note: `secrets` (and optional checks) must not appear in job-level `if:` — use step `if:`.
 
 name: Node.js CI
 
@@ -59,10 +61,7 @@ jobs:
 
   sonarqube:
     name: SonarCloud (optional)
-    if: |
-      (github.event_name == 'pull_request' || github.ref == 'refs/heads/main') &&
-      secrets.SONAR_TOKEN != '' &&
-      hashFiles('sonar-project.properties') != ''
+    if: github.event_name == 'pull_request' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -72,10 +71,15 @@ jobs:
         with:
           fetch-depth: 0
           persist-credentials: false
-      - uses: SonarSource/sonarqube-scan-action@v5
+      - name: Sonar scan
+        if: secrets.SONAR_TOKEN != '' && hashFiles('sonar-project.properties') != ''
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Sonar skipped
+        if: secrets.SONAR_TOKEN == '' || hashFiles('sonar-project.properties') == ''
+        run: echo '::notice::Sonar skipped — add SONAR_TOKEN secret and sonar-project.properties at repo root.'
 
   coderabbit:
     name: CodeRabbit (config validation)
@@ -94,14 +98,18 @@ jobs:
 
   ai_pr_reviewer:
     name: AI PR reviewer (coderabbitai/ai-pr-reviewer)
-    if: github.event_name == 'pull_request' && secrets.OPENAI_API_KEY != ''
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 25
     permissions:
       contents: read
       pull-requests: write
     steps:
+      - name: Skip (no OpenAI key)
+        if: secrets.OPENAI_API_KEY == ''
+        run: echo '::notice::OPENAI_API_KEY not set — skipping ai-pr-reviewer.'
       - uses: coderabbitai/ai-pr-reviewer@v1.19.1
+        if: secrets.OPENAI_API_KEY != ''
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -112,24 +120,28 @@ jobs:
 
   custom_openai_diff:
     name: Custom OpenAI diff review
-    if: |
-      github.event_name == 'pull_request' &&
-      secrets.OPENAI_API_KEY != '' &&
-      vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
       pull-requests: write
     steps:
+      - name: Skip (needs key + RUN_CUSTOM_OPENAI_DIFF)
+        if: secrets.OPENAI_API_KEY == '' || vars.RUN_CUSTOM_OPENAI_DIFF != 'true'
+        run: echo '::notice::Custom GPT diff skipped — set OPENAI_API_KEY and repo variable RUN_CUSTOM_OPENAI_DIFF=true.'
       - uses: actions/checkout@v4
+        if: secrets.OPENAI_API_KEY != '' && vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
         with:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
+        if: secrets.OPENAI_API_KEY != '' && vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
         with:
           node-version: "20"
-      - env:
+      - name: Post GPT diff comment
+        if: secrets.OPENAI_API_KEY != '' && vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
+        env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIFF_REVIEW_MODEL: gpt-4o-mini
