@@ -58,7 +58,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - run: semgrep scan --config auto --error --exclude scripts
+      # Scan first-party code only (avoid vendor paths under node_modules/**/src).
+      - run: semgrep scan --config auto --error ./src
 
   sonarqube:
     name: SonarCloud (optional)

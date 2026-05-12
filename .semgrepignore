@@ -1,0 +1,4 @@
+# Semgrep: ignore vendored and generated trees (CI scans ./src only; this helps local runs).
+node_modules/
+dist/
+coverage/
