@@ -4,7 +4,7 @@
 # Secrets: OPENAI_API_KEY (optional AI steps), SONAR_TOKEN (optional Sonar)
 # Variable: RUN_CUSTOM_OPENAI_DIFF = true → enables scripts/openai-diff-review.mjs
 #
-# Note: `secrets` (and optional checks) must not appear in job-level `if:` — use step `if:`.
+# Optional steps use flags from job env (secrets may only appear in env values, not in `if:`).
 
 name: Node.js CI
 
@@ -66,19 +66,22 @@ jobs:
     timeout-minutes: 30
     permissions:
       contents: read
+    env:
+      HAS_SONAR_SECRET: ${{ secrets.SONAR_TOKEN != '' }}
+      HAS_SONAR_PROPS: ${{ hashFiles('sonar-project.properties') != '' }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           persist-credentials: false
       - name: Sonar scan
-        if: secrets.SONAR_TOKEN != '' && hashFiles('sonar-project.properties') != ''
+        if: env.HAS_SONAR_SECRET == 'true' && env.HAS_SONAR_PROPS == 'true'
         uses: SonarSource/sonarqube-scan-action@v5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Sonar skipped
-        if: secrets.SONAR_TOKEN == '' || hashFiles('sonar-project.properties') == ''
+        if: env.HAS_SONAR_SECRET != 'true' || env.HAS_SONAR_PROPS != 'true'
         run: echo '::notice::Sonar skipped — add SONAR_TOKEN secret and sonar-project.properties at repo root.'
 
   coderabbit:
@@ -104,12 +107,14 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    env:
+      HAS_OPENAI_KEY: ${{ secrets.OPENAI_API_KEY != '' }}
     steps:
       - name: Skip (no OpenAI key)
-        if: secrets.OPENAI_API_KEY == ''
+        if: env.HAS_OPENAI_KEY != 'true'
         run: echo '::notice::OPENAI_API_KEY not set — skipping ai-pr-reviewer.'
       - uses: coderabbitai/ai-pr-reviewer@v1.19.1
-        if: secrets.OPENAI_API_KEY != ''
+        if: env.HAS_OPENAI_KEY == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
@@ -126,21 +131,24 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
+    env:
+      HAS_OPENAI_KEY: ${{ secrets.OPENAI_API_KEY != '' }}
+      RUN_CUSTOM_DIFF: ${{ vars.RUN_CUSTOM_OPENAI_DIFF == 'true' }}
     steps:
       - name: Skip (needs key + RUN_CUSTOM_OPENAI_DIFF)
-        if: secrets.OPENAI_API_KEY == '' || vars.RUN_CUSTOM_OPENAI_DIFF != 'true'
+        if: env.HAS_OPENAI_KEY != 'true' || env.RUN_CUSTOM_DIFF != 'true'
         run: echo '::notice::Custom GPT diff skipped — set OPENAI_API_KEY and repo variable RUN_CUSTOM_OPENAI_DIFF=true.'
       - uses: actions/checkout@v4
-        if: secrets.OPENAI_API_KEY != '' && vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
+        if: env.HAS_OPENAI_KEY == 'true' && env.RUN_CUSTOM_DIFF == 'true'
         with:
           fetch-depth: 0
           persist-credentials: false
       - uses: actions/setup-node@v4
-        if: secrets.OPENAI_API_KEY != '' && vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
+        if: env.HAS_OPENAI_KEY == 'true' && env.RUN_CUSTOM_DIFF == 'true'
         with:
           node-version: "20"
       - name: Post GPT diff comment
-        if: secrets.OPENAI_API_KEY != '' && vars.RUN_CUSTOM_OPENAI_DIFF == 'true'
+        if: env.HAS_OPENAI_KEY == 'true' && env.RUN_CUSTOM_DIFF == 'true'
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
