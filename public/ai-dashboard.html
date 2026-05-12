@@ -6,15 +6,23 @@
     <title>AI Dashboard — CodeRabbit</title>
     <style>
       :root {
-        --bg: #0c0f14;
-        --surface: #141a24;
-        --border: #1e2836;
-        --text: #e8edf5;
+        --bg: #070a0f;
+        --bg-elevated: #0d1119;
+        --surface: rgba(20, 26, 36, 0.85);
+        --surface-solid: #141a24;
+        --border: rgba(46, 62, 86, 0.55);
+        --text: #eef2f8;
         --muted: #8b9cb3;
         --accent: #3dd68c;
-        --accent-dim: rgba(61, 214, 140, 0.15);
-        --radius: 12px;
-        --font: "Segoe UI", system-ui, sans-serif;
+        --accent-soft: rgba(61, 214, 140, 0.12);
+        --violet: #a78bfa;
+        --cyan: #22d3ee;
+        --amber: #fbbf24;
+        --danger: #f87171;
+        --radius: 14px;
+        --radius-sm: 10px;
+        --font: "Segoe UI", system-ui, -apple-system, sans-serif;
+        --font-mono: ui-monospace, "Cascadia Code", "SFMono-Regular", monospace;
       }
       * {
         box-sizing: border-box;
@@ -23,214 +31,564 @@
         margin: 0;
         min-height: 100vh;
         font-family: var(--font);
-        background: radial-gradient(ellipse 120% 80% at 50% -20%, #1a2433 0%, var(--bg) 55%);
         color: var(--text);
-        line-height: 1.5;
+        line-height: 1.55;
+        background-color: var(--bg);
+        background-image:
+          radial-gradient(ellipse 100% 70% at 50% -30%, rgba(61, 214, 140, 0.08), transparent 50%),
+          radial-gradient(ellipse 80% 50% at 100% 0%, rgba(167, 139, 250, 0.06), transparent 45%),
+          linear-gradient(180deg, var(--bg-elevated) 0%, var(--bg) 35%);
       }
-      .wrap {
-        max-width: 1100px;
+      .shell {
+        max-width: 1280px;
         margin: 0 auto;
-        padding: 2rem 1.25rem 3rem;
+        padding: 1.5rem clamp(1rem, 3vw, 2rem) 3rem;
       }
-      header {
-        margin-bottom: 2rem;
+      .topbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 1.25rem;
+        margin-bottom: 1.75rem;
       }
-      header h1 {
-        font-size: 1.75rem;
-        font-weight: 600;
-        letter-spacing: -0.02em;
-        margin: 0 0 0.35rem;
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
       }
-      header p {
-        margin: 0;
-        color: var(--muted);
-        font-size: 0.95rem;
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
       }
       .badge {
-        display: inline-block;
-        font-size: 0.7rem;
-        font-weight: 600;
+        font-size: 0.65rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
         text-transform: uppercase;
-        letter-spacing: 0.06em;
-        padding: 0.2rem 0.5rem;
+        padding: 0.28rem 0.55rem;
         border-radius: 6px;
-        background: var(--accent-dim);
+        background: var(--accent-soft);
         color: var(--accent);
-        margin-bottom: 0.75rem;
+        border: 1px solid rgba(61, 214, 140, 0.25);
       }
-      .grid {
-        display: grid;
-        gap: 1rem;
-        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      .badge.violet {
+        background: rgba(167, 139, 250, 0.12);
+        color: var(--violet);
+        border-color: rgba(167, 139, 250, 0.25);
       }
-      .card {
-        background: var(--surface);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 1.25rem 1.35rem;
-      }
-      .card h2 {
-        font-size: 0.85rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--muted);
-        margin: 0 0 0.75rem;
-      }
-      .stat {
-        font-size: 1.85rem;
+      h1 {
+        font-size: clamp(1.65rem, 3.5vw, 2.35rem);
         font-weight: 700;
         letter-spacing: -0.03em;
-        color: var(--text);
+        margin: 0;
+        line-height: 1.15;
       }
-      .stat span {
-        font-size: 0.9rem;
-        font-weight: 500;
+      .subtitle {
+        max-width: 52ch;
         color: var(--muted);
-      }
-      .card p {
-        margin: 0.65rem 0 0;
-        font-size: 0.9rem;
-        color: var(--muted);
-      }
-      .links {
-        margin-top: 1.5rem;
-      }
-      .links a {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.35rem;
-        color: var(--accent);
-        text-decoration: none;
-        font-size: 0.9rem;
-        margin-right: 1.25rem;
-        margin-top: 0.5rem;
-      }
-      .links a:hover {
-        text-decoration: underline;
-      }
-      .foot {
-        margin-top: 2.5rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid var(--border);
-        font-size: 0.8rem;
-        color: var(--muted);
+        font-size: 0.95rem;
+        margin: 0.25rem 0 0;
       }
       .pulse {
         display: inline-block;
-        width: 8px;
-        height: 8px;
+        width: 7px;
+        height: 7px;
         border-radius: 50%;
         background: var(--accent);
-        margin-right: 0.4rem;
-        animation: pulse 2s ease-in-out infinite;
+        margin-right: 0.45rem;
+        vertical-align: middle;
+        animation: pulse 2.2s ease-in-out infinite;
       }
       @keyframes pulse {
         0%,
         100% {
           opacity: 1;
+          transform: scale(1);
         }
         50% {
           opacity: 0.35;
+          transform: scale(0.9);
         }
       }
-      .live-strip {
+      .live-grid {
         display: grid;
-        gap: 0.75rem 1.5rem;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.75rem;
+        margin-bottom: 1.75rem;
+      }
+      .live-tile {
         background: var(--surface);
+        backdrop-filter: blur(10px);
         border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 1rem 1.25rem;
-        margin-bottom: 1.5rem;
-        font-size: 0.88rem;
+        border-radius: var(--radius-sm);
+        padding: 1rem 1.1rem;
       }
-      .live-strip strong {
-        color: var(--muted);
-        font-weight: 600;
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
+      .live-tile label {
         display: block;
-        margin-bottom: 0.25rem;
+        font-size: 0.68rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+        margin-bottom: 0.35rem;
       }
-      .live-strip .mono {
-        font-family: ui-monospace, "Cascadia Code", monospace;
+      .live-tile .value {
+        font-family: var(--font-mono);
+        font-size: 0.88rem;
         color: var(--text);
-        word-break: break-all;
+        word-break: break-word;
       }
       .live-err {
-        color: #f59e0b;
         grid-column: 1 / -1;
+        color: var(--amber);
+        font-size: 0.85rem;
+        padding: 0.75rem 1rem;
+        border-radius: var(--radius-sm);
+        background: rgba(251, 191, 36, 0.08);
+        border: 1px solid rgba(251, 191, 36, 0.25);
+      }
+      .layout {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 1.25rem;
+      }
+      @media (min-width: 960px) {
+        .layout {
+          grid-template-columns: 1fr 320px;
+          align-items: start;
+        }
+      }
+      .bento {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+      .card {
+        background: var(--surface-solid);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.25rem 1.35rem;
+        position: relative;
+        overflow: hidden;
+      }
+      .card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--accent), var(--cyan));
+        opacity: 0.65;
+      }
+      .card.violet::before {
+        background: linear-gradient(90deg, var(--violet), var(--cyan));
+      }
+      .card h2 {
+        font-size: 0.78rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--muted);
+        margin: 0 0 0.65rem;
+      }
+      .card .lead {
+        font-size: 1.15rem;
+        font-weight: 650;
+        letter-spacing: -0.02em;
+        margin: 0 0 0.5rem;
+        color: var(--text);
+      }
+      .card p {
+        margin: 0;
+        font-size: 0.88rem;
+        color: var(--muted);
+      }
+      .card.wide {
+        grid-column: 1 / -1;
+      }
+      @media (min-width: 720px) {
+        .card.span-2 {
+          grid-column: span 2;
+        }
+      }
+      .rings {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+        margin-top: 1rem;
+        align-items: center;
+      }
+      .ring {
+        --p: 72;
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: conic-gradient(var(--accent) calc(var(--p) * 1%), rgba(255, 255, 255, 0.06) 0);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+      }
+      .ring span {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: var(--surface-solid);
+        display: grid;
+        place-items: center;
+        font-size: 0.72rem;
+        font-weight: 700;
+        font-family: var(--font-mono);
+        color: var(--accent);
+      }
+      .ring.cyan {
+        background: conic-gradient(var(--cyan) calc(var(--p) * 1%), rgba(255, 255, 255, 0.06) 0);
+      }
+      .ring.cyan span {
+        color: var(--cyan);
+      }
+      .ring.violet {
+        background: conic-gradient(var(--violet) calc(var(--p) * 1%), rgba(255, 255, 255, 0.06) 0);
+      }
+      .ring.violet span {
+        color: var(--violet);
+      }
+      .spark {
+        display: flex;
+        align-items: flex-end;
+        gap: 3px;
+        height: 36px;
+        margin-top: 0.75rem;
+      }
+      .spark i {
+        flex: 1;
+        min-width: 4px;
+        max-width: 10px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, var(--accent), transparent);
+        opacity: 0.85;
+        animation: bar 1.4s ease-in-out infinite;
+      }
+      .spark i:nth-child(2) {
+        animation-delay: 0.1s;
+      }
+      .spark i:nth-child(3) {
+        animation-delay: 0.2s;
+      }
+      .spark i:nth-child(4) {
+        animation-delay: 0.3s;
+      }
+      .spark i:nth-child(5) {
+        animation-delay: 0.4s;
+      }
+      .spark i:nth-child(6) {
+        animation-delay: 0.5s;
+      }
+      .spark i:nth-child(7) {
+        animation-delay: 0.6s;
+      }
+      @keyframes bar {
+        0%,
+        100% {
+          height: 25%;
+        }
+        50% {
+          height: 100%;
+        }
+      }
+      aside.panel {
+        background: var(--surface-solid);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 1.15rem 1.2rem;
+      }
+      .panel h3 {
+        margin: 0 0 0.85rem;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        color: var(--muted);
+      }
+      .flow {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        font-size: 0.82rem;
+      }
+      .flow-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--muted);
+      }
+      .flow-row strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
+        flex-shrink: 0;
+      }
+      .dot.warn {
+        background: var(--amber);
+      }
+      .dot.idle {
+        background: var(--muted);
+      }
+      .feed {
+        margin-top: 1rem;
+        max-height: 280px;
+        overflow: auto;
+        font-size: 0.8rem;
+        border-top: 1px solid var(--border);
+        padding-top: 0.75rem;
+      }
+      .feed-item {
+        padding: 0.45rem 0;
+        border-bottom: 1px solid rgba(46, 62, 86, 0.35);
+        color: var(--muted);
+      }
+      .feed-item time {
+        font-family: var(--font-mono);
+        font-size: 0.72rem;
+        color: var(--cyan);
+        margin-right: 0.5rem;
+      }
+      table.jobs {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.82rem;
+        margin-top: 0.75rem;
+      }
+      table.jobs th,
+      table.jobs td {
+        text-align: left;
+        padding: 0.5rem 0.35rem;
+        border-bottom: 1px solid var(--border);
+      }
+      table.jobs th {
+        color: var(--muted);
+        font-weight: 600;
+        font-size: 0.68rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+      .tag {
+        display: inline-block;
+        font-size: 0.65rem;
+        padding: 0.15rem 0.4rem;
+        border-radius: 4px;
+        background: rgba(34, 211, 238, 0.12);
+        color: var(--cyan);
+      }
+      nav.links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem 1.25rem;
+        margin-top: 1.75rem;
+      }
+      nav.links a {
+        color: var(--accent);
+        text-decoration: none;
+        font-size: 0.88rem;
+        font-weight: 500;
+      }
+      nav.links a:hover {
+        text-decoration: underline;
+      }
+      footer.foot {
+        margin-top: 2rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border);
+        font-size: 0.78rem;
+        color: var(--muted);
+      }
+      code {
+        font-family: var(--font-mono);
+        font-size: 0.85em;
+        background: rgba(0, 0, 0, 0.35);
+        padding: 0.12rem 0.35rem;
+        border-radius: 4px;
       }
     </style>
   </head>
   <body>
-    <div class="wrap">
-      <header>
-        <span class="badge">Local</span>
-        <h1>AI dashboard</h1>
-        <p>
-          <span class="pulse" aria-hidden="true"></span>
-          Pull-request intelligence and CodeRabbit wiring at a glance. Cards below are static
-          reference; the live strip updates from this server every few seconds. GitHub or
-          CodeRabbit metrics need their APIs and credentials wired in separately.
-        </p>
+    <div class="shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="badge-row">
+            <span class="badge">Live runtime</span>
+            <span class="badge violet">CodeRabbit-ready</span>
+          </div>
+          <h1>AI engineering dashboard</h1>
+          <p class="subtitle">
+            <span class="pulse" aria-hidden="true"></span>
+            Local control plane for CI, CodeRabbit, and optional OpenAI review. The tiles below mix
+            <strong style="color: var(--text)">live server data</strong> with static wiring notes —
+            plug in GitHub or CodeRabbit APIs when you want real PR metrics.
+          </p>
+        </div>
       </header>
 
-      <section class="live-strip" aria-live="polite" aria-label="Live dashboard data">
-        <div>
-          <strong>Browser clock</strong>
-          <span class="mono" id="browser-clock">—</span>
+      <section class="live-grid" aria-live="polite" aria-label="Live metrics">
+        <div class="live-tile">
+          <label>Browser</label>
+          <span class="value" id="browser-clock">—</span>
         </div>
-        <div>
-          <strong>Server time (UTC)</strong>
-          <span class="mono" id="live-server-time">—</span>
+        <div class="live-tile">
+          <label>Server UTC</label>
+          <span class="value" id="live-server-time">—</span>
         </div>
-        <div>
-          <strong>Process</strong>
-          <span class="mono"><span id="live-uptime">—</span> uptime · <span id="live-node">—</span></span>
+        <div class="live-tile">
+          <label>App (package.json)</label>
+          <span class="value" id="live-app-id">—</span>
+        </div>
+        <div class="live-tile">
+          <label>Node · PID · platform</label>
+          <span class="value" id="live-runtime">—</span>
+        </div>
+        <div class="live-tile">
+          <label>Memory (heap / rss)</label>
+          <span class="value" id="live-memory">—</span>
+        </div>
+        <div class="live-tile">
+          <label>Process uptime</label>
+          <span class="value" id="live-uptime">—</span>
         </div>
         <p class="live-err" id="live-error" hidden></p>
       </section>
 
-      <section class="grid" aria-label="Overview metrics">
-        <article class="card">
-          <h2>PR reviews</h2>
-          <div class="stat">CodeRabbit <span>GitHub App</span></div>
-          <p>Install the app on the repo, then open a PR for AI review comments and summaries.</p>
-        </article>
-        <article class="card">
-          <h2>Config</h2>
-          <div class="stat">.coderabbit.yaml <span>branch</span></div>
-          <p>Reviews follow the config on the PR branch. CI can validate YAML on pull requests.</p>
-        </article>
-        <article class="card">
-          <h2>CI checks</h2>
-          <div class="stat">Node.js CI <span>workflow</span></div>
-          <p>Lint, test, and build run on every PR and on pushes to <code>main</code>.</p>
-        </article>
-        <article class="card">
-          <h2>Next steps</h2>
-          <div class="stat" style="font-size: 1.1rem; font-weight: 600">Wire your data</div>
-          <p>
-            Replace this page with API-backed widgets (review counts, severity trends, MTTR) when
-            you expose metrics from GitHub or CodeRabbit.
+      <div class="layout">
+        <div>
+          <section class="bento" aria-label="Overview">
+            <article class="card span-2">
+              <h2>Runtime snapshot</h2>
+              <p class="lead" id="card-app-desc">Loading app metadata…</p>
+              <p>
+                Values refresh from <code>/api/status</code>. Upgrade to Node 20+ locally for parity
+                with GitHub Actions.
+              </p>
+              <div class="rings" aria-hidden="true">
+                <div class="ring" id="ring-ci" style="--p: 88"><span id="ring-ci-lbl">—</span></div>
+                <div class="ring cyan" id="ring-sec" style="--p: 76"><span id="ring-sec-lbl">—</span></div>
+                <div class="ring violet" id="ring-ai" style="--p: 64"><span id="ring-ai-lbl">—</span></div>
+                <div>
+                  <p style="margin: 0; font-size: 0.8rem; color: var(--muted); max-width: 22ch">
+                    Decorative rings derived from uptime (demo). Replace with real check pass rates
+                    from your CI API.
+                  </p>
+                  <div class="spark" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            <article class="card">
+              <h2>PR reviews</h2>
+              <p class="lead">CodeRabbit</p>
+              <p>Install the GitHub App, then open a PR for AI comments, summaries, and config from <code>.coderabbit.yaml</code>.</p>
+            </article>
+
+            <article class="card violet">
+              <h2>Custom GPT</h2>
+              <p class="lead">OpenAI in CI</p>
+              <p>
+                Workflow posts PR comments and commit comments on <code>main</code> when
+                <code>OPENAI_API_KEY</code> is set.
+              </p>
+            </article>
+
+            <article class="card">
+              <h2>Static analysis</h2>
+              <p class="lead">Semgrep + ESLint</p>
+              <p>Semgrep targets <code>./src</code>; ESLint covers TypeScript. Tune rules as the codebase grows.</p>
+            </article>
+
+            <article class="card wide">
+              <h2>GitHub Actions — Node.js CI</h2>
+              <p style="margin-bottom: 0.5rem; font-size: 0.88rem; color: var(--muted)">
+                Reference map of jobs in <code>.github/workflows/node-ci.yml</code>.
+              </p>
+              <table class="jobs">
+                <thead>
+                  <tr>
+                    <th>Job</th>
+                    <th>When</th>
+                    <th>Notes</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Lint, test & build</strong></td>
+                    <td><span class="tag">PR + main</span></td>
+                    <td>Node 20, npm ci, gate for merge</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Semgrep</strong></td>
+                    <td><span class="tag">PR + main</span></td>
+                    <td>Security scan on <code>src/</code></td>
+                  </tr>
+                  <tr>
+                    <td><strong>SonarCloud</strong></td>
+                    <td><span class="tag">Optional</span></td>
+                    <td>Needs <code>SONAR_TOKEN</code> + <code>sonar-project.properties</code></td>
+                  </tr>
+                  <tr>
+                    <td><strong>CodeRabbit config</strong></td>
+                    <td><span class="tag">PR + push</span></td>
+                    <td>Validates YAML; app delivers reviews</td>
+                  </tr>
+                  <tr>
+                    <td><strong>AI PR reviewer</strong></td>
+                    <td><span class="tag">PR</span></td>
+                    <td><code>coderabbitai/ai-pr-reviewer</code> + OpenAI</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Custom OpenAI diff</strong></td>
+                    <td><span class="tag">PR + push</span></td>
+                    <td>Scripted diff summary</td>
+                  </tr>
+                </tbody>
+              </table>
+            </article>
+          </section>
+
+          <nav class="links" aria-label="Quick links">
+            <a href="https://github.com/apps/coderabbit/">Install CodeRabbit</a>
+            <a href="https://docs.coderabbit.ai/guides/configure-coderabbit">CodeRabbit docs</a>
+            <a href="https://docs.github.com/en/actions">GitHub Actions</a>
+            <a href="https://semgrep.dev/docs/">Semgrep docs</a>
+          </nav>
+
+          <footer class="foot">
+            Served by <code>npm run dashboard</code> — use <code>http://127.0.0.1:3847/</code> (not
+            <code>file://</code>) so live polling works.
+          </footer>
+        </div>
+
+        <aside class="panel" aria-label="Activity and flow">
+          <h3>Delivery flow</h3>
+          <div class="flow">
+            <div class="flow-row"><span class="dot"></span> <strong>Push / PR</strong> → Actions</div>
+            <div class="flow-row"><span class="dot"></span> <strong>CI green</strong> → merge confidence</div>
+            <div class="flow-row"><span class="dot warn"></span> <strong>CodeRabbit</strong> → AI review on PR</div>
+            <div class="flow-row"><span class="dot idle"></span> <strong>Dashboard</strong> → local observability</div>
+          </div>
+          <h3 style="margin-top: 1.25rem">Simulated activity</h3>
+          <p style="font-size: 0.78rem; color: var(--muted); margin: 0 0 0.25rem">
+            Placeholder feed — swap for GitHub webhooks or audit log export.
           </p>
-        </article>
-      </section>
-
-      <nav class="links" aria-label="Quick links">
-        <a href="https://github.com/apps/coderabbit/">Install CodeRabbit</a>
-        <a href="https://docs.coderabbit.ai/guides/configure-coderabbit">Configuration docs</a>
-        <a href="https://docs.github.com/en/actions">GitHub Actions</a>
-      </nav>
-
-      <footer class="foot">
-        Served by this repo’s <code>npm run dashboard</code> helper. Live values use
-        <code>/api/status</code> (same origin). Opening this file as <code>file://</code> will not
-        poll the server.
-      </footer>
+          <div class="feed" id="activity-feed" aria-label="Simulated activity"></div>
+        </aside>
+      </div>
     </div>
     <script>
       (function () {
@@ -253,8 +611,26 @@
 
         var timeEl = document.getElementById("live-server-time");
         var uptimeEl = document.getElementById("live-uptime");
-        var nodeEl = document.getElementById("live-node");
+        var appEl = document.getElementById("live-app-id");
+        var runtimeEl = document.getElementById("live-runtime");
+        var memEl = document.getElementById("live-memory");
+        var descEl = document.getElementById("card-app-desc");
         var errEl = document.getElementById("live-error");
+        var ringCi = document.getElementById("ring-ci");
+        var ringSec = document.getElementById("ring-sec");
+        var ringAi = document.getElementById("ring-ai");
+        var ringCiLbl = document.getElementById("ring-ci-lbl");
+        var ringSecLbl = document.getElementById("ring-sec-lbl");
+        var ringAiLbl = document.getElementById("ring-ai-lbl");
+
+        function setRing(el, lbl, pct) {
+          if (el) {
+            el.style.setProperty("--p", String(Math.min(99, Math.max(8, pct))));
+          }
+          if (lbl) {
+            lbl.textContent = String(Math.round(pct)) + "%";
+          }
+        }
 
         function poll() {
           fetch("/api/status", { cache: "no-store" })
@@ -272,24 +648,74 @@
               if (timeEl) {
                 timeEl.textContent = data.serverTime || "—";
               }
+              var up = typeof data.uptimeSeconds === "number" ? data.uptimeSeconds : 0;
               if (uptimeEl) {
-                uptimeEl.textContent =
-                  typeof data.uptimeSeconds === "number" ? data.uptimeSeconds + "s" : "—";
+                var m = Math.floor(up / 60);
+                var s = up % 60;
+                uptimeEl.textContent = m > 0 ? m + "m " + s + "s" : s + "s";
               }
-              if (nodeEl) {
-                nodeEl.textContent = data.node || "—";
+              if (appEl) {
+                var name = data.appName || "app";
+                var ver = data.appVersion || "";
+                appEl.textContent = name + (ver ? " @" + ver : "");
               }
+              if (runtimeEl) {
+                runtimeEl.textContent =
+                  (data.node || "—") + " · pid " + (data.pid != null ? data.pid : "—") + " · " + (data.platform || "—");
+              }
+              if (memEl) {
+                memEl.textContent =
+                  (data.heapUsedMb != null ? data.heapUsedMb : "—") +
+                  " MB heap · " +
+                  (data.rssMb != null ? data.rssMb : "—") +
+                  " MB rss";
+              }
+              if (descEl) {
+                descEl.textContent = data.appDescription || "Node.js project dashboard";
+              }
+              var phase = (up * 17) % 100;
+              setRing(ringCi, ringCiLbl, 72 + (phase % 22));
+              setRing(ringSec, ringSecLbl, 68 + ((phase + 31) % 24));
+              setRing(ringAi, ringAiLbl, 55 + ((phase + 7) % 30));
             })
             .catch(function () {
               if (errEl) {
                 errEl.hidden = false;
                 errEl.textContent =
-                  "Live server stats unavailable — use http://127.0.0.1:3847/ after npm run dashboard (not file://).";
+                  "Live API unreachable — open this page via the dashboard server URL (not file://).";
               }
             });
         }
         poll();
         setInterval(poll, 3000);
+
+        var lines = [
+          "Workflow dispatch: lint cache warm",
+          "Semgrep: ruleset auto — 0 blocking on src/",
+          "Dependabot: skipped (not configured)",
+          "CodeRabbit: waiting for PR event",
+          "OpenAI diff job: idle until secret present",
+          "Branch protection: require status checks",
+          "Artifact: dist/ not uploaded in this template",
+        ];
+        var feed = document.getElementById("activity-feed");
+        var i = 0;
+        function pushLine() {
+          if (!feed) {
+            return;
+          }
+          var t = new Date().toISOString().slice(11, 19);
+          var row = document.createElement("div");
+          row.className = "feed-item";
+          row.innerHTML = "<time>" + t + "</time>" + lines[i % lines.length];
+          feed.insertBefore(row, feed.firstChild);
+          while (feed.children.length > 12) {
+            feed.removeChild(feed.lastChild);
+          }
+          i += 1;
+        }
+        pushLine();
+        setInterval(pushLine, 5200);
       })();
     </script>
   </body>

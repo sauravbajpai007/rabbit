@@ -6,6 +6,19 @@ var path = require("path");
 
 var port = Number(process.env.PORT || 3847);
 var htmlPath = path.join(__dirname, "..", "public", "ai-dashboard.html");
+var pkgPath = path.join(__dirname, "..", "package.json");
+
+function readPackageMeta() {
+  try {
+    var raw = fs.readFileSync(pkgPath, "utf8");
+    var j = JSON.parse(raw);
+    return { name: j.name || "", version: j.version || "", description: j.description || "" };
+  } catch (e) {
+    return { name: "", version: "", description: "" };
+  }
+}
+
+var cachedPkg = readPackageMeta();
 
 function pathOnly(url) {
   if (!url) {
@@ -32,11 +45,19 @@ http
     }
 
     if (isApiStatus(req.url)) {
+      var mem = process.memoryUsage();
       var payload = JSON.stringify({
         ok: true,
         serverTime: new Date().toISOString(),
         uptimeSeconds: Math.floor(process.uptime()),
         node: process.version,
+        platform: process.platform,
+        pid: process.pid,
+        heapUsedMb: Math.round(mem.heapUsed / 1024 / 1024),
+        rssMb: Math.round(mem.rss / 1024 / 1024),
+        appName: cachedPkg.name,
+        appVersion: cachedPkg.version,
+        appDescription: cachedPkg.description,
       });
       res.writeHead(200, {
         "Content-Type": "application/json; charset=utf-8",
